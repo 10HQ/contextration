@@ -13,13 +13,14 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://contextration.arbajsheikh720-0.chatgpt.site"),
   title: "ContextRation — Make context earn its place",
   description: "An open-source, OTel-friendly context efficiency auditor for AI agents.",
   applicationName: "ContextRation",
   keywords: ["AI agents", "context engineering", "OpenTelemetry", "LLM evaluation", "token efficiency"],
   openGraph: {
     title: "ContextRation — Feed your agents only what matters",
-    description: "Measure the marginal utility of every context item, validate safer token budgets, and export a policy you can defend.",
+    description: "Measure the marginal utility of every context item, validate evidence-scoped token budgets, and export a policy you can defend.",
     type: "website",
     images: [
       {
@@ -36,6 +37,7 @@ export const metadata: Metadata = {
     description: "Make context earn its place.",
     images: ["/og.png"],
   },
+  alternates: { canonical: "/" },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
