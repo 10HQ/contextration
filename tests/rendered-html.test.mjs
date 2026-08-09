@@ -54,6 +54,7 @@ test("ships an actionable quickstart and accessible workbench semantics", async 
   assert.match(html, /role="status" aria-live="polite"/);
   assert.match(html, /class="workbench notranslate" translate="no"/);
   assert.match(html, /class="terminal-card notranslate" translate="no"/);
+  assert.match(html, /<link(?=[^>]*rel="icon")(?=[^>]*href="[^"]*\/icon\.svg")[^>]*>/i);
   assert.match(html, /<meta(?=[^>]*property="og:image:width")(?=[^>]*content="1731")[^>]*>/i);
 });
 
