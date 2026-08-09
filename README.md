@@ -1,5 +1,26 @@
 # ContextRation
 
+<p align="center">
+  <img src="public/og.png" alt="ContextRation — Make context earn its place" width="100%" />
+</p>
+
+<p align="center">
+  <strong>Make context earn its place.</strong><br />
+  Evidence-driven context efficiency auditing for AI agents.
+</p>
+
+<p align="center">
+  <a href="https://github.com/10HQ/contextration/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/10HQ/contextration/actions/workflows/ci.yml/badge.svg" /></a>
+  <a href="LICENSE"><img alt="Apache-2.0 license" src="https://img.shields.io/badge/license-Apache--2.0-c9ff3d" /></a>
+  <a href="https://www.npmjs.com/"><img alt="Node 22.13 or newer" src="https://img.shields.io/badge/node-%E2%89%A522.13-10110f" /></a>
+</p>
+
+<p align="center">
+  <a href="https://contextration.arbajsheikh720-0.chatgpt.site"><strong>Live workbench →</strong></a>
+  · <a href="docs/benchmarking.md">Methodology</a>
+  · <a href="benchmarks/schema.json">Trace schema</a>
+</p>
+
 ContextRation is an OpenTelemetry-friendly context-efficiency auditor for AI
 agents. It turns offline trace exports and redacted fixtures into evidence about
 which context is useful, which context deserves another experiment, and which

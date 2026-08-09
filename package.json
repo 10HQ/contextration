@@ -4,6 +4,20 @@
   "private": true,
   "description": "An OTel-friendly context efficiency auditor for AI agents.",
   "license": "Apache-2.0",
+  "homepage": "https://contextration.arbajsheikh720-0.chatgpt.site",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/10HQ/contextration.git"
+  },
+  "bugs": {
+    "url": "https://github.com/10HQ/contextration/issues"
+  },
+  "keywords": [
+    "ai-agents",
+    "context-engineering",
+    "llm-evaluation",
+    "opentelemetry"
+  ],
   "engines": {
     "node": ">=22.13.0"
   },
