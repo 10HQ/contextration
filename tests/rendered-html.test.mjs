@@ -36,3 +36,30 @@ test("ships semantic navigation and the core methodology", async () => {
   assert.match(html, /Validated policy/);
   assert.match(html, /Trace-native export/);
 });
+
+test("ships an actionable quickstart and accessible workbench semantics", async () => {
+  const response = await render();
+  const html = await response.text();
+
+  assert.match(html, /href="https:\/\/github\.com\/10HQ\/contextration"/);
+  assert.match(html, /git clone https:\/\/github\.com\/10HQ\//);
+  assert.match(html, /role="group" aria-label="Demo trace"/);
+  assert.match(html, /aria-pressed="true"/);
+  assert.doesNotMatch(html, /role="tablist"/);
+  assert.match(html, /role="table" aria-labelledby="ledger-title"/);
+  assert.match(html, /role="columnheader"/);
+  assert.match(html, /role="rowheader"/);
+  assert.match(html, /role="cell"/);
+  assert.match(html, /role="img" aria-label="Baseline: 14,580 input tokens, quality 91\.0%, baseline\."/);
+  assert.match(html, /role="status" aria-live="polite"/);
+  assert.match(html, /<meta(?=[^>]*property="og:image:width")(?=[^>]*content="1731")[^>]*>/i);
+});
+
+test("does not leak local build or font paths", async () => {
+  const response = await render();
+  const html = await response.text();
+
+  assert.doesNotMatch(html, /C:\/Users/i);
+  assert.doesNotMatch(html, /\\Users\\/i);
+  assert.doesNotMatch(html, /signalkite/i);
+});

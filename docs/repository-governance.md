@@ -32,14 +32,24 @@ Protect the default branch with a repository ruleset that requires:
 
 The current [CODEOWNERS](../.github/CODEOWNERS) file uses the repository
 maintainer identity configured for this project. Update it if the repository is
-transferred or dedicated teams are created. It covers at least:
+transferred or dedicated teams are created. It covers every path by default and
+makes security-, evidence-, deployment-, and supply-chain-sensitive paths
+explicit:
 
 ```text
-/lib/**                       @maintainer
-/benchmarks/**                @benchmark-reviewer
-/docs/security-model.md       @security-reviewer
-/SECURITY.md                  @security-reviewer
-/.github/**                   @security-reviewer
+*                              @10HQ
+/lib/**                        @10HQ
+/benchmarks/**                 @10HQ
+/worker/**                     @10HQ
+/vite.config.ts                @10HQ
+/package.json                  @10HQ
+/package-lock.json             @10HQ
+/.openai/**                    @10HQ
+/docs/security-model.md        @10HQ
+/docs/data-handling.md         @10HQ
+/docs/repository-governance.md @10HQ
+/SECURITY.md                   @10HQ
+/.github/**                    @10HQ
 ```
 
 ## Required repository settings
@@ -75,7 +85,8 @@ metric requires a new schema version or explicit migration.
 
 Before tagging a release:
 
-1. run `npm ci`, `npm run test:unit`, and `npm run build` from a clean checkout;
+1. run `npm ci`, `npm run typecheck`, `npm run lint`, and `npm test` from a
+   clean checkout;
 2. review dependency and code-scanning alerts;
 3. confirm public fixtures are synthetic or redistributable;
 4. verify documentation matches the runtime field names and policy gate;

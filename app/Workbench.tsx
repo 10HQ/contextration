@@ -26,6 +26,11 @@ const CATEGORY_COLORS: Record<ContextCategory, string> = {
   other: "#9ba3a1",
 };
 
+const REPOSITORY_URL = "https://github.com/10HQ/contextration";
+const COPY_STATUS_DURATION_MS = 2400;
+
+type CopyStatus = "idle" | "copied" | "failed";
+
 function percent(value: number, digits = 1) {
   return `${(value * 100).toFixed(digits)}%`;
 }
@@ -87,17 +92,17 @@ function CandidatePlot({ trace, epsilon }: { trace: ContextTrace; epsilon: numbe
   const floorY = y(trace.baseline.quality - epsilon);
 
   return (
-    <div className="plot-shell" aria-label="Candidate quality versus input tokens">
+    <section className="plot-shell" aria-labelledby="candidate-plot-title">
       <div className="plot-heading">
         <div>
           <span className="eyebrow">Counterfactual frontier</span>
-          <h3>Quality vs. input tokens</h3>
+          <h3 id="candidate-plot-title">Quality vs. input tokens</h3>
         </div>
         <span className="demo-pill">DEMO DATA</span>
       </div>
-      <div className="plot-area">
-        <div className="plot-grid plot-grid--x" />
-        <div className="plot-grid plot-grid--y" />
+      <div className="plot-area" role="group" aria-label="Candidate measurements">
+        <div className="plot-grid plot-grid--x" aria-hidden="true" />
+        <div className="plot-grid plot-grid--y" aria-hidden="true" />
         <div className="quality-zone" style={{ height: `${Math.max(0, floorY)}%` }}>
           <span>non-inferior zone</span>
         </div>
@@ -110,33 +115,55 @@ function CandidatePlot({ trace, epsilon }: { trace: ContextTrace; epsilon: numbe
             Boolean(run.qualityLossCi95) &&
             (run.qualityLossCi95?.[1] ?? Number.POSITIVE_INFINITY) <= epsilon + 1e-10
           );
+          const pointX = x(run.inputTokens);
+          const pointStatus = run.baseline ? "baseline" : isValid ? "valid" : "not valid";
+          const accessibleStatus = run.baseline
+            ? "baseline"
+            : `${pointStatus} at epsilon ${epsilon.toFixed(3)}`;
           return (
             <div
               className={`plot-point${run.baseline ? " plot-point--baseline" : ""}${isValid ? " plot-point--valid" : ""}`}
               key={run.id}
-              style={{ left: `${x(run.inputTokens)}%`, top: `${y(run.quality)}%` }}
+              role="img"
+              aria-label={`${run.label}: ${run.inputTokens.toLocaleString()} input tokens, quality ${percent(run.quality)}, ${accessibleStatus}.`}
+              style={{ left: `${pointX}%`, top: `${y(run.quality)}%` }}
             >
-              <span className="plot-dot" />
-              <span className="plot-label">{run.label}</span>
+              <span className="plot-dot" aria-hidden="true" />
+              <span className={`plot-label${pointX > 70 ? " plot-label--left" : ""}`} aria-hidden="true">
+                {run.label}
+                <span className="plot-status">{pointStatus}</span>
+              </span>
             </div>
           );
         })}
         <span className="axis-label axis-label--y">QUALITY ↑</span>
         <span className="axis-label axis-label--x">FEWER TOKENS ←</span>
       </div>
-    </div>
+    </section>
   );
 }
 
 function JsonPanel({ policy, traceId }: { policy: unknown; traceId: string }) {
-  const [copied, setCopied] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<CopyStatus>("idle");
   const value = JSON.stringify(policy, null, 2);
 
   async function copy() {
-    await navigator.clipboard.writeText(value);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
+      await navigator.clipboard.writeText(value);
+      setCopyStatus("copied");
+    } catch {
+      setCopyStatus("failed");
+    }
+    window.setTimeout(() => setCopyStatus("idle"), COPY_STATUS_DURATION_MS);
   }
+
+  const copyLabel = copyStatus === "copied" ? "Copied" : copyStatus === "failed" ? "Copy failed" : "Copy JSON";
+  const copyAnnouncement = copyStatus === "copied"
+    ? "Policy JSON copied to the clipboard."
+    : copyStatus === "failed"
+      ? "Could not copy policy JSON. Select the JSON and copy it manually."
+      : "";
 
   return (
     <section className="json-panel" aria-labelledby="policy-title">
@@ -146,8 +173,9 @@ function JsonPanel({ policy, traceId }: { policy: unknown; traceId: string }) {
           <h3 id="policy-title">Validated policy</h3>
         </div>
         <button type="button" className="copy-button" onClick={copy}>
-          {copied ? "Copied" : "Copy JSON"}
+          {copyLabel}
         </button>
+        <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">{copyAnnouncement}</span>
       </div>
       <div className="code-meta">
         <span>trace/{traceId}</span>
@@ -161,7 +189,7 @@ function JsonPanel({ policy, traceId }: { policy: unknown; traceId: string }) {
 export function Workbench() {
   const [traceIndex, setTraceIndex] = useState(0);
   const [epsilon, setEpsilon] = useState(DEMO_TRACES[0].evaluator.epsilon);
-  const [commandCopied, setCommandCopied] = useState(false);
+  const [commandCopyStatus, setCommandCopyStatus] = useState<CopyStatus>("idle");
   const trace = DEMO_TRACES[traceIndex];
   const report = useMemo(() => auditTrace(trace, epsilon), [trace, epsilon]);
   const otel = useMemo(() => toOtelAttributes(report), [report]);
@@ -173,10 +201,26 @@ export function Workbench() {
   }
 
   async function copyCommand() {
-    await navigator.clipboard.writeText("npm run audit:demo");
-    setCommandCopied(true);
-    window.setTimeout(() => setCommandCopied(false), 1600);
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
+      await navigator.clipboard.writeText("npm run audit:demo");
+      setCommandCopyStatus("copied");
+    } catch {
+      setCommandCopyStatus("failed");
+    }
+    window.setTimeout(() => setCommandCopyStatus("idle"), COPY_STATUS_DURATION_MS);
   }
+
+  const commandCopyLabel = commandCopyStatus === "copied"
+    ? "Command copied"
+    : commandCopyStatus === "failed"
+      ? "Copy failed"
+      : "Copy audit command";
+  const commandCopyAnnouncement = commandCopyStatus === "copied"
+    ? "Audit command copied to the clipboard."
+    : commandCopyStatus === "failed"
+      ? "Could not copy the audit command. Select the command and copy it manually."
+      : "";
 
   return (
     <main>
@@ -231,12 +275,11 @@ export function Workbench() {
 
         <div className="workbench">
           <div className="workbench-toolbar">
-            <div className="trace-tabs" role="tablist" aria-label="Demo trace">
+            <div className="trace-tabs" role="group" aria-label="Demo trace">
               {DEMO_TRACES.map((item, index) => (
                 <button
                   type="button"
-                  role="tab"
-                  aria-selected={traceIndex === index}
+                  aria-pressed={traceIndex === index}
                   className={traceIndex === index ? "active" : ""}
                   key={item.traceId}
                   onClick={() => chooseTrace(index)}
@@ -289,26 +332,30 @@ export function Workbench() {
                 </div>
                 <span className="item-count">{report.items.length} items · {compactTokens(report.contextTokens)} tokens</span>
               </div>
-              <div className="ledger-header" aria-hidden="true">
-                <span>Context item</span><span>Tokens</span><span>Δ quality</span><span>Evidence</span>
-              </div>
-              <div className="ledger-list">
-                {report.items.map((item) => (
-                  <article className="ledger-row" key={item.id}>
-                    <div className="item-name">
-                      <span className="category-dot" style={{ background: CATEGORY_COLORS[item.category] }} />
-                      <div><strong>{item.label}</strong><span>{CATEGORY_LABELS[item.category]} · {item.source}</span></div>
+              <div className="ledger-table" role="table" aria-labelledby="ledger-title">
+                <div role="rowgroup">
+                  <div className="ledger-header" role="row">
+                    <span role="columnheader">Context item</span><span role="columnheader">Tokens</span><span role="columnheader">Δ quality</span><span role="columnheader">Evidence</span>
+                  </div>
+                </div>
+                <div className="ledger-list" role="rowgroup">
+                  {report.items.map((item) => (
+                    <div className="ledger-row" role="row" key={item.id}>
+                      <div className="item-name" role="rowheader">
+                        <span className="category-dot" style={{ background: CATEGORY_COLORS[item.category] }} aria-hidden="true" />
+                        <div><strong>{item.label}</strong><span>{CATEGORY_LABELS[item.category]} · {item.source}</span></div>
+                      </div>
+                      <div className="token-cell" role="cell">
+                        <strong>{item.tokens.toLocaleString()}</strong>
+                        <span aria-hidden="true"><i style={{ width: `${(item.tokens / maxItemTokens) * 100}%`, background: CATEGORY_COLORS[item.category] }} /></span>
+                      </div>
+                      <span className={`delta ${item.evidenceStatus === "non-inferior" ? "delta--safe" : ""}`} role="cell">{formatDelta(item.qualityLoss)}</span>
+                      <span className={`verdict verdict--${item.recommendation}`} role="cell">
+                        {item.recommendation === "experiment-candidate" ? "candidate" : item.recommendation}
+                      </span>
                     </div>
-                    <div className="token-cell">
-                      <strong>{item.tokens.toLocaleString()}</strong>
-                      <span><i style={{ width: `${(item.tokens / maxItemTokens) * 100}%`, background: CATEGORY_COLORS[item.category] }} /></span>
-                    </div>
-                    <span className={`delta ${item.evidenceStatus === "non-inferior" ? "delta--safe" : ""}`}>{formatDelta(item.qualityLoss)}</span>
-                    <span className={`verdict verdict--${item.recommendation}`}>
-                      {item.recommendation === "experiment-candidate" ? "candidate" : item.recommendation}
-                    </span>
-                  </article>
-                ))}
+                  ))}
+                </div>
               </div>
               <div className="ledger-note">
                 <span>Important</span>
@@ -367,10 +414,15 @@ export function Workbench() {
           <span className="eyebrow">Two-minute local proof</span>
           <h2>Clone. Audit.<br /><em>Question the context.</em></h2>
           <p>The repository ships with three reproducible fixtures, a typed schema, a CLI, tests, and the same browser workbench you are using now.</p>
+          <a className="repo-link" href={REPOSITORY_URL} target="_blank" rel="noreferrer">
+            View source on GitHub <span aria-hidden="true">↗</span>
+          </a>
         </div>
         <div className="terminal-card">
           <div className="terminal-bar"><span /><span /><span /><strong>contextration / terminal</strong></div>
           <div className="terminal-body">
+            <p><span>$</span> git clone https://github.com/10HQ/<wbr />contextration.git</p>
+            <p><span>$</span> cd contextration</p>
             <p><span>$</span> npm install</p>
             <p><span>$</span> npm run audit:demo</p>
             <div className="terminal-output">
@@ -379,7 +431,8 @@ export function Workbench() {
               <span>✓ outcome delta</span><strong>{formatDelta(report.qualityLoss)}</strong>
               <span>→ policy</span><strong>{report.validatedCandidate?.id ?? "none"}</strong>
             </div>
-            <button type="button" onClick={copyCommand}>{commandCopied ? "Command copied" : "Copy audit command"}</button>
+            <button type="button" onClick={copyCommand}>{commandCopyLabel}</button>
+            <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">{commandCopyAnnouncement}</span>
           </div>
         </div>
       </section>

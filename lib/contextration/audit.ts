@@ -23,6 +23,75 @@ const CATEGORY_ORDER: ContextCategory[] = [
 ];
 const CATEGORY_SET = new Set<string>(CATEGORY_ORDER);
 const NUMERIC_TOLERANCE = 1e-10;
+const RUN_METRIC_KEYS = [
+  "quality",
+  "inputTokens",
+  "outputTokens",
+  "latencyMs",
+  "costUsd",
+  "attempts",
+  "successes",
+] as const;
+const TRACE_KEYS = new Set([
+  "schemaVersion",
+  "traceId",
+  "name",
+  "description",
+  "model",
+  "framework",
+  "capturedAt",
+  "syntheticDemo",
+  "experiment",
+  "evaluator",
+  "baseline",
+  "contextItems",
+  "candidates",
+  "auditCostUsd",
+]);
+const EXPERIMENT_KEYS = new Set([
+  "id",
+  "dataset",
+  "evaluatorVersion",
+  "modelRevision",
+  "temperature",
+  "seed",
+]);
+const EVALUATOR_KEYS = new Set([
+  "name",
+  "epsilon",
+  "confidence",
+  "requiredSuccessRate",
+  "higherIsBetter",
+]);
+const RUN_METRIC_KEY_SET = new Set<string>(RUN_METRIC_KEYS);
+const ABLATION_KEYS = new Set([
+  "quality",
+  "latencyMs",
+  "attempts",
+  "successes",
+  "qualityLossCi95",
+]);
+const CONTEXT_ITEM_KEYS = new Set([
+  "id",
+  "label",
+  "category",
+  "tokens",
+  "source",
+  "position",
+  "required",
+  "cached",
+  "contentHash",
+  "ablation",
+]);
+const CANDIDATE_KEYS = new Set([
+  "id",
+  "label",
+  "dropItemIds",
+  "qualityLossCi95",
+  ...RUN_METRIC_KEYS,
+]);
+const RFC3339_DATE_TIME_PATTERN =
+  /^(\d{4})-(\d{2})-(\d{2})[Tt](\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:[Zz]|([+-])(\d{2}):(\d{2}))$/;
 
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 
@@ -47,10 +116,64 @@ function requireRecord(value: unknown, path: string): Record<string, unknown> {
   return value;
 }
 
+function rejectUnknownKeys(
+  value: Record<string, unknown>,
+  path: string,
+  allowedKeys: ReadonlySet<string>,
+) {
+  for (const key of Object.keys(value)) {
+    if (!allowedKeys.has(key)) {
+      throw new TraceValidationError(`${path}[${JSON.stringify(key)}] is not allowed.`);
+    }
+  }
+}
+
 function requireString(value: unknown, path: string) {
   if (typeof value !== "string" || value.trim() === "") {
     throw new TraceValidationError(`${path} must be a non-empty string.`);
   }
+}
+
+function isLeapYear(year: number) {
+  return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+}
+
+function isRfc3339DateTime(value: string) {
+  const match = RFC3339_DATE_TIME_PATTERN.exec(value);
+  if (!match) return false;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = Number(match[4]);
+  const minute = Number(match[5]);
+  const second = Number(match[6]);
+  const offsetSign = match[7];
+  const offsetHour = Number(match[8] ?? 0);
+  const offsetMinute = Number(match[9] ?? 0);
+  const daysInMonth = [31, isLeapYear(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+  if (month < 1 || month > 12 || day < 1 || day > daysInMonth[month - 1]) return false;
+  if (hour > 23 || minute > 59 || second > 60) return false;
+  if (offsetHour > 23 || offsetMinute > 59) return false;
+  if (second < 60) return true;
+
+  // RFC 3339 permits :60 only at the UTC minute where a June or December
+  // leap second can occur. Offset timestamps must identify that same minute.
+  const localMinute = new Date(0);
+  localMinute.setUTCFullYear(year, month - 1, day);
+  localMinute.setUTCHours(hour, minute, 0, 0);
+  const offsetDirection = offsetSign === "-" ? -1 : 1;
+  const offsetMs = offsetDirection * (offsetHour * 60 + offsetMinute) * 60_000;
+  const utcMinute = new Date(localMinute.getTime() - offsetMs);
+  const utcMonth = utcMinute.getUTCMonth() + 1;
+  const utcDay = utcMinute.getUTCDate();
+
+  return (
+    utcMinute.getUTCHours() === 23 &&
+    utcMinute.getUTCMinutes() === 59 &&
+    ((utcMonth === 6 && utcDay === 30) || (utcMonth === 12 && utcDay === 31))
+  );
 }
 
 function requireBoolean(value: unknown, path: string) {
@@ -110,6 +233,7 @@ function validateAblation(
   path: string,
 ): asserts value is AblationResult {
   const ablation = requireRecord(value, path);
+  rejectUnknownKeys(ablation, path, ABLATION_KEYS);
   requireFinite(ablation.quality, `${path}.quality`, 0, 1);
   requireFinite(ablation.latencyMs, `${path}.latencyMs`, 0);
   validateAttempts(ablation, path);
@@ -123,18 +247,20 @@ function validateAblation(
 /** Runtime boundary for JSON/CLI input. */
 export function validateTrace(input: unknown): asserts input is ContextTrace {
   const trace = requireRecord(input, "trace");
+  rejectUnknownKeys(trace, "trace", TRACE_KEYS);
   if (trace.schemaVersion !== "0.1") {
     throw new TraceValidationError(`Unsupported schema version: ${String(trace.schemaVersion)}`);
   }
   for (const key of ["traceId", "name", "description", "model", "framework", "capturedAt"] as const) {
     requireString(trace[key], `trace.${key}`);
   }
-  if (Number.isNaN(Date.parse(trace.capturedAt as string))) {
-    throw new TraceValidationError("trace.capturedAt must be an ISO-compatible timestamp.");
+  if (!isRfc3339DateTime(trace.capturedAt as string)) {
+    throw new TraceValidationError("trace.capturedAt must be an RFC 3339 date-time timestamp.");
   }
   requireBoolean(trace.syntheticDemo, "trace.syntheticDemo");
 
   const experiment = requireRecord(trace.experiment, "trace.experiment");
+  rejectUnknownKeys(experiment, "trace.experiment", EXPERIMENT_KEYS);
   for (const key of ["id", "dataset", "evaluatorVersion", "modelRevision"] as const) {
     requireString(experiment[key], `trace.experiment.${key}`);
   }
@@ -142,6 +268,7 @@ export function validateTrace(input: unknown): asserts input is ContextTrace {
   requireInteger(experiment.seed, "trace.experiment.seed", 0);
 
   const evaluator = requireRecord(trace.evaluator, "trace.evaluator");
+  rejectUnknownKeys(evaluator, "trace.evaluator", EVALUATOR_KEYS);
   requireString(evaluator.name, "trace.evaluator.name");
   requireFinite(evaluator.epsilon, "trace.evaluator.epsilon", 0, 1);
   if (evaluator.confidence !== 0.95) {
@@ -153,6 +280,7 @@ export function validateTrace(input: unknown): asserts input is ContextTrace {
   }
 
   const baseline = requireRecord(trace.baseline, "trace.baseline");
+  rejectUnknownKeys(baseline, "trace.baseline", RUN_METRIC_KEY_SET);
   validateRunMetrics(baseline, "trace.baseline");
   const baselineSuccessRate = (baseline.successes as number) / (baseline.attempts as number);
   if (baselineSuccessRate + NUMERIC_TOLERANCE < (evaluator.requiredSuccessRate as number)) {
@@ -169,6 +297,7 @@ export function validateTrace(input: unknown): asserts input is ContextTrace {
   for (const [index, rawItem] of trace.contextItems.entries()) {
     const path = `trace.contextItems[${index}]`;
     const item = requireRecord(rawItem, path);
+    rejectUnknownKeys(item, path, CONTEXT_ITEM_KEYS);
     requireString(item.id, `${path}.id`);
     requireString(item.label, `${path}.label`);
     requireString(item.source, `${path}.source`);
@@ -207,6 +336,7 @@ export function validateTrace(input: unknown): asserts input is ContextTrace {
   for (const [index, rawCandidate] of trace.candidates.entries()) {
     const path = `trace.candidates[${index}]`;
     const candidate = requireRecord(rawCandidate, path);
+    rejectUnknownKeys(candidate, path, CANDIDATE_KEYS);
     requireString(candidate.id, `${path}.id`);
     requireString(candidate.label, `${path}.label`);
     if (candidateIds.has(candidate.id as string)) {

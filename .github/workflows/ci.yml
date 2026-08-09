@@ -43,3 +43,6 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Test rendered output
+        run: node --test tests/rendered-html.test.mjs

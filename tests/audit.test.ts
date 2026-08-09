@@ -161,3 +161,120 @@ test("marks individual ablations without intervals as measurement work", () => {
   assert.equal(item?.evidenceStatus, "insufficient-evidence");
   assert.equal(item?.recommendation, "measure");
 });
+
+test("rejects a misspelled required flag before it can bypass protection", () => {
+  const trace = cloneTrace();
+  const item = trace.contextItems[0] as ContextTrace["contextItems"][number] & {
+    requiredd?: boolean;
+  };
+  delete item.required;
+  item.requiredd = true;
+  trace.candidates = [{
+    ...trace.candidates[0],
+    id: "typo-required",
+    dropItemIds: ["system-core"],
+    inputTokens: 13760,
+    quality: 0.91,
+    qualityLossCi95: [-0.001, 0.001],
+  }];
+
+  assert.throws(
+    () => auditTrace(trace),
+    /trace\.contextItems\[0\]\["requiredd"\] is not allowed/,
+  );
+});
+
+test("rejects unknown item and candidate payloads instead of copying them into reports", () => {
+  const itemPayload = cloneTrace() as ContextTrace & {
+    contextItems: Array<ContextTrace["contextItems"][number] & { rawContent?: string }>;
+  };
+  itemPayload.contextItems[0].rawContent = "SECRET_PROMPT";
+  assert.throws(
+    () => auditTrace(itemPayload),
+    /trace\.contextItems\[0\]\["rawContent"\] is not allowed/,
+  );
+
+  const candidatePayload = cloneTrace() as ContextTrace & {
+    candidates: Array<ContextTrace["candidates"][number] & { rawRuns?: string }>;
+  };
+  candidatePayload.candidates[1].rawRuns = "SECRET_RUNS";
+  assert.throws(
+    () => auditTrace(candidatePayload),
+    /trace\.candidates\[1\]\["rawRuns"\] is not allowed/,
+  );
+});
+
+test("rejects unknown fields at every remaining object boundary", () => {
+  const cases: Array<{
+    path: RegExp;
+    addUnknown: (trace: ContextTrace) => void;
+  }> = [
+    {
+      path: /trace\["unexpected"\] is not allowed/,
+      addUnknown: (trace) => {
+        (trace as ContextTrace & { unexpected?: boolean }).unexpected = true;
+      },
+    },
+    {
+      path: /trace\.experiment\["unexpected"\] is not allowed/,
+      addUnknown: (trace) => {
+        (trace.experiment as ContextTrace["experiment"] & { unexpected?: boolean }).unexpected = true;
+      },
+    },
+    {
+      path: /trace\.evaluator\["unexpected"\] is not allowed/,
+      addUnknown: (trace) => {
+        (trace.evaluator as ContextTrace["evaluator"] & { unexpected?: boolean }).unexpected = true;
+      },
+    },
+    {
+      path: /trace\.baseline\["unexpected"\] is not allowed/,
+      addUnknown: (trace) => {
+        (trace.baseline as ContextTrace["baseline"] & { unexpected?: boolean }).unexpected = true;
+      },
+    },
+    {
+      path: /trace\.contextItems\[0\]\.ablation\["unexpected"\] is not allowed/,
+      addUnknown: (trace) => {
+        (trace.contextItems[0].ablation as NonNullable<
+          ContextTrace["contextItems"][number]["ablation"]
+        > & { unexpected?: boolean }).unexpected = true;
+      },
+    },
+  ];
+
+  for (const { path, addUnknown } of cases) {
+    const trace = cloneTrace();
+    addUnknown(trace);
+    assert.throws(() => auditTrace(trace), path);
+  }
+});
+
+test("rejects non-RFC3339 and impossible capturedAt timestamps", () => {
+  for (const capturedAt of [
+    "1",
+    "08/08/2026",
+    "2026-02-30T00:00:00Z",
+    "2025-02-29T00:00:00Z",
+    "2026-08-08T24:00:00Z",
+    "2026-08-08T10:30:00+01:60",
+  ]) {
+    const trace = cloneTrace();
+    trace.capturedAt = capturedAt;
+    assert.throws(() => auditTrace(trace), /RFC 3339 date-time timestamp/);
+  }
+});
+
+test("accepts RFC3339 offsets, fractional seconds, leap days, and leap seconds", () => {
+  for (const capturedAt of [
+    "1996-12-19T16:39:57-08:00",
+    "1985-04-12t23:20:50.52z",
+    "2024-02-29T00:00:00+05:30",
+    "1990-12-31T23:59:60Z",
+    "1990-12-31T15:59:60-08:00",
+  ]) {
+    const trace = cloneTrace();
+    trace.capturedAt = capturedAt;
+    assert.doesNotThrow(() => auditTrace(trace));
+  }
+});

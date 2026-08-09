@@ -23,7 +23,9 @@ function parseArgs(argv: string[]) {
     if (arg === "--json") options.json = true;
     else if (arg === "--otel") options.otel = true;
     else if (arg.startsWith("--epsilon=")) {
-      const epsilon = Number(arg.slice(10));
+      const rawEpsilon = arg.slice("--epsilon=".length);
+      if (rawEpsilon.trim() === "") throw new Error("--epsilon must include a finite number.");
+      const epsilon = Number(rawEpsilon);
       if (!Number.isFinite(epsilon)) throw new Error("--epsilon must be a finite number.");
       options.epsilon = epsilon;
     } else if (!arg.startsWith("-") && !options.file) options.file = arg;
@@ -35,6 +37,12 @@ function parseArgs(argv: string[]) {
 
 function percent(value: number) {
   return `${(value * 100).toFixed(1)}%`;
+}
+
+function terminalText(value: string) {
+  return value.replace(/[\u0000-\u001f\u007f-\u009f]/g, (character) =>
+    `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}`,
+  );
 }
 
 function signedOutcomeDelta(qualityLoss: number) {
@@ -62,20 +70,20 @@ async function main() {
     return;
   }
 
-  console.log(`\nContextRation audit · ${report.traceName}`);
+  console.log(`\nContextRation audit · ${terminalText(report.traceName)}`);
   console.log("─".repeat(68));
   console.log(`Evidence status             ${report.evidenceStatus}`);
   console.log(`Attribution coverage        ${percent(report.attributionCoverage)}`);
   console.log(`Individual opportunities    ${report.individualOpportunityTokens.toLocaleString()} tokens`);
   console.log(`Validated token reduction   ${percent(report.validatedTokenReduction)}`);
   console.log(`Outcome delta vs. baseline  ${signedOutcomeDelta(report.qualityLoss)}`);
-  console.log(`Validated candidate         ${report.validatedCandidate?.label ?? "none"}`);
+  console.log(`Validated candidate         ${report.validatedCandidate ? terminalText(report.validatedCandidate.label) : "none"}`);
   console.log(`Projected cost change       ${report.projectedCostReductionUsd >= 0 ? "−" : "+"}$${Math.abs(report.projectedCostReductionUsd).toFixed(4)} / run`);
   console.log(`Projected audit payback     ${report.paybackRuns !== null ? `${report.paybackRuns} runs` : "not reached"}`);
   console.log("");
 
   const rows = report.items.map((item) => ({
-    item: item.label,
+    item: terminalText(item.label),
     category: item.category,
     tokens: item.tokens,
     "quality loss": item.qualityLoss === null ? "—" : item.qualityLoss.toFixed(3),
@@ -92,6 +100,6 @@ async function main() {
 
 main().catch((error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);
-  console.error(`ContextRation failed: ${message}`);
+  console.error(`ContextRation failed: ${terminalText(message)}`);
   process.exitCode = 1;
 });

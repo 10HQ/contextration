@@ -1,0 +1,17 @@
+# The repository maintainer reviews all changes by default.
+* @10HQ
+
+# Keep security-, evidence-, deployment-, and supply-chain-sensitive paths
+# explicit so future ownership changes do not accidentally weaken coverage.
+/lib/** @10HQ
+/benchmarks/** @10HQ
+/worker/** @10HQ
+/vite.config.ts @10HQ
+/package.json @10HQ
+/package-lock.json @10HQ
+/.openai/** @10HQ
+/docs/security-model.md @10HQ
+/docs/data-handling.md @10HQ
+/docs/repository-governance.md @10HQ
+/SECURITY.md @10HQ
+/.github/** @10HQ
