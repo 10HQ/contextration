@@ -273,7 +273,7 @@ export function Workbench() {
           <p>Switch workloads and change the accepted quality margin. Every recommendation is recalculated in your browser from the open fixture.</p>
         </div>
 
-        <div className="workbench">
+        <div className="workbench notranslate" translate="no">
           <div className="workbench-toolbar">
             <div className="trace-tabs" role="group" aria-label="Demo trace">
               {DEMO_TRACES.map((item, index) => (
@@ -418,7 +418,7 @@ export function Workbench() {
             View source on GitHub <span aria-hidden="true">↗</span>
           </a>
         </div>
-        <div className="terminal-card">
+        <div className="terminal-card notranslate" translate="no">
           <div className="terminal-bar"><span /><span /><span /><strong>contextration / terminal</strong></div>
           <div className="terminal-body">
             <p><span>$</span> git clone https://github.com/10HQ/<wbr />contextration.git</p>

@@ -26,6 +26,7 @@ export const metadata: Metadata = {
     description: "Make context earn its place.",
     images: ["/og.png"],
   },
+  icons: { icon: "/icon.svg" },
   alternates: { canonical: "/" },
 };
 
