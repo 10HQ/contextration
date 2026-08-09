@@ -1,0 +1,81 @@
+name: Bug report
+description: Report a reproducible ContextRation defect using synthetic or redacted data.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping improve ContextRation. Do not include production
+        traces, raw prompts, credentials, personal data, or proprietary content.
+        Security vulnerabilities must be reported privately through SECURITY.md.
+
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Release version or full commit SHA where the issue occurs.
+      placeholder: 0.1.0 or 0123456...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Affected surface
+      options:
+        - Audit library
+        - CLI
+        - JSON schema
+        - OTel attribute adapter
+        - Dashboard or application shell
+        - Documentation
+        - CI or release tooling
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened, and what did you expect instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Use a synthetic fixture and include exact commands. Redact all sensitive data before submission.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: trace_shape
+    attributes:
+      label: Relevant trace shape
+      description: Paste only the smallest synthetic or redacted JSON fragment needed to reproduce the issue.
+      render: json
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Node version, operating system, model/evaluator fixture version, and any other relevant details.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Submission checks
+      options:
+        - label: I removed raw prompts, user content, credentials, personal data, and proprietary material.
+          required: true
+        - label: This is not a security vulnerability; I will use the private process in SECURITY.md for security issues.
+          required: true
+        - label: I did not infer a combined candidate by adding or unioning individual ablation results.
+          required: true

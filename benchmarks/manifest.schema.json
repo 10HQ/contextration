@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:contextration:schema:benchmark-manifest:0.1",
+  "title": "ContextRation benchmark manifest 0.1",
+  "description": "Minimum reproducibility metadata for a published ContextRation benchmark run.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "name",
+    "executedAt",
+    "codeCommit",
+    "dataset",
+    "model",
+    "evaluator",
+    "tokenizer",
+    "protocol",
+    "cases"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "0.1" },
+    "name": { "$ref": "#/$defs/nonEmptyString" },
+    "executedAt": { "type": "string", "format": "date-time" },
+    "codeCommit": { "$ref": "#/$defs/nonEmptyString" },
+    "dataset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "hash", "redistribution"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "version": { "$ref": "#/$defs/nonEmptyString" },
+        "hash": { "$ref": "#/$defs/nonEmptyString" },
+        "redistribution": {
+          "enum": ["synthetic", "permitted", "metadata-only", "private"]
+        }
+      }
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "name", "revision", "parametersHash"],
+      "properties": {
+        "provider": { "$ref": "#/$defs/nonEmptyString" },
+        "name": { "$ref": "#/$defs/nonEmptyString" },
+        "revision": { "$ref": "#/$defs/nonEmptyString" },
+        "parametersHash": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "evaluator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version", "rubricHash", "epsilon", "confidence", "requiredSuccessRate"],
+      "properties": {
+        "name": { "$ref": "#/$defs/nonEmptyString" },
+        "version": { "$ref": "#/$defs/nonEmptyString" },
+        "rubricHash": { "$ref": "#/$defs/nonEmptyString" },
+        "epsilon": { "type": "number", "minimum": 0, "maximum": 1 },
+        "confidence": { "const": 0.95 },
+        "requiredSuccessRate": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "tokenizer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "$ref": "#/$defs/nonEmptyString" },
+        "version": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "protocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "plannedAttempts",
+        "pairingKey",
+        "intervalEstimator",
+        "timeoutMs",
+        "retryPolicy",
+        "cacheMode",
+        "concurrency",
+        "warmupRuns",
+        "seedPolicy"
+      ],
+      "properties": {
+        "plannedAttempts": { "type": "integer", "minimum": 1 },
+        "pairingKey": { "$ref": "#/$defs/nonEmptyString" },
+        "intervalEstimator": { "$ref": "#/$defs/nonEmptyString" },
+        "timeoutMs": { "type": "number", "minimum": 0 },
+        "retryPolicy": { "$ref": "#/$defs/nonEmptyString" },
+        "cacheMode": { "enum": ["disabled", "cold", "warm", "mixed"] },
+        "concurrency": { "type": "integer", "minimum": 1 },
+        "warmupRuns": { "type": "integer", "minimum": 0 },
+        "seedPolicy": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "runtime": { "$ref": "#/$defs/nonEmptyString" },
+        "operatingSystem": { "$ref": "#/$defs/nonEmptyString" },
+        "region": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["traceFile", "traceHash", "syntheticDemo"],
+        "properties": {
+          "traceFile": { "$ref": "#/$defs/nonEmptyString" },
+          "traceHash": { "$ref": "#/$defs/nonEmptyString" },
+          "syntheticDemo": { "type": "boolean" }
+        }
+      }
+    },
+    "plannedExclusions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/nonEmptyString" }
+    },
+    "notes": { "type": "string" }
+  },
+  "$defs": {
+    "nonEmptyString": { "type": "string", "minLength": 1 }
+  }
+}

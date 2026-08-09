@@ -1,0 +1,68 @@
+name: Feature request
+description: Propose a focused improvement to ContextRation.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the audit or integration problem before proposing an interface.
+        ContextRation remains offline-first and does not persist raw agent content
+        by default.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What evidence, workflow, or interoperability gap needs to be addressed?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: Describe the smallest useful change and its expected users.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: boundary
+    attributes:
+      label: Primary area
+      options:
+        - Trace schema or validation
+        - Ablation or candidate evidence
+        - Metrics and benchmarking
+        - OpenTelemetry interoperability
+        - Privacy or security
+        - CLI
+        - Dashboard or visualization
+        - Documentation or governance
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence and alternatives
+      description: Include synthetic examples, rejected alternatives, and any benchmark protocol needed to evaluate the change.
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: Privacy, security, and compatibility impact
+      description: Explain effects on raw-content handling, policy promotion, OTel cardinality, schema compatibility, and existing fixtures.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: invariants
+    attributes:
+      label: Project invariants
+      options:
+        - label: The proposal keeps raw-content persistence off by default.
+          required: true
+        - label: The proposal does not combine individual ablations into policy without a complete candidate rerun.
+          required: true

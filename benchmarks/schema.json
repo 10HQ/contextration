@@ -1,0 +1,216 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:contextration:schema:context-trace:0.1",
+  "title": "ContextRation ContextTrace 0.1",
+  "description": "Offline-first metadata and experiment results for one AI-agent context audit. Raw context content is intentionally excluded.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "traceId",
+    "name",
+    "description",
+    "model",
+    "framework",
+    "capturedAt",
+    "syntheticDemo",
+    "experiment",
+    "evaluator",
+    "baseline",
+    "contextItems",
+    "candidates",
+    "auditCostUsd"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "0.1" },
+    "traceId": { "$ref": "#/$defs/nonEmptyString" },
+    "name": { "$ref": "#/$defs/nonEmptyString" },
+    "description": { "$ref": "#/$defs/nonEmptyString" },
+    "model": { "$ref": "#/$defs/nonEmptyString" },
+    "framework": { "$ref": "#/$defs/nonEmptyString" },
+    "capturedAt": { "type": "string", "format": "date-time" },
+    "syntheticDemo": {
+      "type": "boolean",
+      "description": "True only for illustrative synthetic data that must not be presented as a production benchmark."
+    },
+    "experiment": { "$ref": "#/$defs/experimentScope" },
+    "evaluator": { "$ref": "#/$defs/evaluator" },
+    "baseline": { "$ref": "#/$defs/runMetrics" },
+    "contextItems": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/contextItem" }
+    },
+    "candidates": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/candidateRun" }
+    },
+    "auditCostUsd": { "type": "number", "minimum": 0 }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "quality": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "attempts": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "successes": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Must not exceed attempts; enforced by runtime validation."
+    },
+    "qualityLossCi95": {
+      "type": "array",
+      "description": "Paired 95% confidence interval for baseline quality minus candidate quality. Runtime validation requires ordered bounds and the observed point loss to lie inside the interval.",
+      "prefixItems": [
+        { "type": "number", "minimum": -1, "maximum": 1 },
+        { "type": "number", "minimum": -1, "maximum": 1 }
+      ],
+      "items": false,
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "experimentScope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "dataset",
+        "evaluatorVersion",
+        "modelRevision",
+        "temperature",
+        "seed"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "dataset": { "$ref": "#/$defs/nonEmptyString" },
+        "evaluatorVersion": { "$ref": "#/$defs/nonEmptyString" },
+        "modelRevision": { "$ref": "#/$defs/nonEmptyString" },
+        "temperature": { "type": "number", "minimum": 0 },
+        "seed": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "evaluator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "epsilon",
+        "confidence",
+        "requiredSuccessRate",
+        "higherIsBetter"
+      ],
+      "properties": {
+        "name": { "$ref": "#/$defs/nonEmptyString" },
+        "epsilon": { "type": "number", "minimum": 0, "maximum": 1 },
+        "confidence": { "const": 0.95 },
+        "requiredSuccessRate": { "type": "number", "minimum": 0, "maximum": 1 },
+        "higherIsBetter": { "const": true }
+      }
+    },
+    "runMetrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "quality",
+        "inputTokens",
+        "outputTokens",
+        "latencyMs",
+        "costUsd",
+        "attempts",
+        "successes"
+      ],
+      "properties": {
+        "quality": { "$ref": "#/$defs/quality" },
+        "inputTokens": { "type": "integer", "minimum": 1 },
+        "outputTokens": { "type": "integer", "minimum": 0 },
+        "latencyMs": { "type": "number", "minimum": 0 },
+        "costUsd": { "type": "number", "minimum": 0 },
+        "attempts": { "$ref": "#/$defs/attempts" },
+        "successes": { "$ref": "#/$defs/successes" }
+      }
+    },
+    "trialAggregate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["quality", "latencyMs", "attempts", "successes"],
+      "properties": {
+        "quality": { "$ref": "#/$defs/quality" },
+        "latencyMs": { "type": "number", "minimum": 0 },
+        "attempts": { "$ref": "#/$defs/attempts" },
+        "successes": { "$ref": "#/$defs/successes" },
+        "qualityLossCi95": { "$ref": "#/$defs/qualityLossCi95" }
+      }
+    },
+    "contextItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "category", "tokens", "source", "position"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "label": { "$ref": "#/$defs/nonEmptyString" },
+        "category": {
+          "enum": [
+            "system",
+            "history",
+            "retrieval",
+            "tool_schema",
+            "tool_result",
+            "memory",
+            "scratchpad",
+            "other"
+          ]
+        },
+        "tokens": { "type": "integer", "minimum": 1 },
+        "source": { "$ref": "#/$defs/nonEmptyString" },
+        "position": { "type": "integer", "minimum": 0 },
+        "required": { "type": "boolean" },
+        "cached": { "type": "boolean" },
+        "contentHash": { "$ref": "#/$defs/nonEmptyString" },
+        "ablation": { "$ref": "#/$defs/trialAggregate" }
+      }
+    },
+    "candidateRun": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "A complete end-to-end rerun of one explicit combined removal. Missing qualityLossCi95 is valid input but remains inconclusive. Runtime validation checks referenced IDs and exact input-token arithmetic.",
+      "required": [
+        "id",
+        "label",
+        "dropItemIds",
+        "quality",
+        "inputTokens",
+        "outputTokens",
+        "latencyMs",
+        "costUsd",
+        "attempts",
+        "successes"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "label": { "$ref": "#/$defs/nonEmptyString" },
+        "dropItemIds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/nonEmptyString" }
+        },
+        "quality": { "$ref": "#/$defs/quality" },
+        "inputTokens": { "type": "integer", "minimum": 1 },
+        "outputTokens": { "type": "integer", "minimum": 0 },
+        "latencyMs": { "type": "number", "minimum": 0 },
+        "costUsd": { "type": "number", "minimum": 0 },
+        "attempts": { "$ref": "#/$defs/attempts" },
+        "successes": { "$ref": "#/$defs/successes" },
+        "qualityLossCi95": { "$ref": "#/$defs/qualityLossCi95" }
+      }
+    }
+  }
+}

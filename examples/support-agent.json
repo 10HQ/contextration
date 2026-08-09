@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "0.1",
+  "traceId": "trace_support_018",
+  "name": "Returns support agent",
+  "description": "A customer-support agent resolves a damaged-order return using policy retrieval and one order lookup.",
+  "model": "frontier-medium",
+  "framework": "OpenTelemetry GenAI export",
+  "capturedAt": "2026-08-08T10:30:00.000Z",
+  "syntheticDemo": true,
+  "experiment": {
+    "id": "exp_support_demo_v1",
+    "dataset": "fixture://support-cases@1",
+    "evaluatorVersion": "goal-success-v2@demo-1",
+    "modelRevision": "frontier-medium@demo-2026-08",
+    "temperature": 0,
+    "seed": 42
+  },
+  "evaluator": {
+    "name": "goal-success-v2",
+    "epsilon": 0.01,
+    "confidence": 0.95,
+    "requiredSuccessRate": 1,
+    "higherIsBetter": true
+  },
+  "baseline": {
+    "quality": 0.91,
+    "inputTokens": 14580,
+    "outputTokens": 482,
+    "latencyMs": 4210,
+    "costUsd": 0.0438,
+    "attempts": 7,
+    "successes": 7
+  },
+  "contextItems": [
+    { "id": "system-core", "label": "Core support policy", "category": "system", "tokens": 820, "source": "prompt://support/core@12", "position": 0, "required": true, "ablation": { "quality": 0.42, "latencyMs": 3780, "attempts": 5, "successes": 5, "qualityLossCi95": [0.47, 0.51] } },
+    { "id": "policy-guardrails", "label": "Refund guardrails", "category": "system", "tokens": 1240, "source": "prompt://support/refunds@8", "position": 1, "required": true, "ablation": { "quality": 0.55, "latencyMs": 3820, "attempts": 5, "successes": 5, "qualityLossCi95": [0.34, 0.38] } },
+    { "id": "conversation", "label": "Conversation history", "category": "history", "tokens": 2810, "source": "trace://messages/0-14", "position": 2, "ablation": { "quality": 0.888, "latencyMs": 3310, "attempts": 5, "successes": 5, "qualityLossCi95": [0.015, 0.029] } },
+    { "id": "pricing-page", "label": "Pricing page retrieval", "category": "retrieval", "tokens": 1850, "source": "https://docs.example/pricing", "position": 3, "ablation": { "quality": 0.902, "latencyMs": 3550, "attempts": 5, "successes": 5, "qualityLossCi95": [0.003, 0.012] } },
+    { "id": "returns-page", "label": "Returns policy retrieval", "category": "retrieval", "tokens": 2140, "source": "https://docs.example/returns", "position": 4, "ablation": { "quality": 0.74, "latencyMs": 3490, "attempts": 5, "successes": 5, "qualityLossCi95": [0.155, 0.185] } },
+    { "id": "mcp-schemas", "label": "14 MCP tool definitions", "category": "tool_schema", "tokens": 3050, "source": "mcp://support-tools", "position": 5, "ablation": { "quality": 0.913, "latencyMs": 3030, "attempts": 5, "successes": 5, "qualityLossCi95": [-0.007, 0.002] } },
+    { "id": "order-result", "label": "Order lookup result", "category": "tool_result", "tokens": 970, "source": "tool://orders/get", "position": 6, "required": true, "ablation": { "quality": 0.61, "latencyMs": 3090, "attempts": 5, "successes": 5, "qualityLossCi95": [0.28, 0.32] } },
+    { "id": "customer-memory", "label": "Customer preference memory", "category": "memory", "tokens": 1080, "source": "memory://customer/hashed", "position": 7, "ablation": { "quality": 0.908, "latencyMs": 3150, "attempts": 5, "successes": 5, "qualityLossCi95": [-0.003, 0.007] } }
+  ],
+  "candidates": [
+    { "id": "drop-unused-tools", "label": "Remove unused tool schemas", "dropItemIds": ["mcp-schemas"], "quality": 0.913, "inputTokens": 11530, "outputTokens": 476, "latencyMs": 3180, "costUsd": 0.0347, "attempts": 7, "successes": 7, "qualityLossCi95": [-0.007, 0.002] },
+    { "id": "lean-support", "label": "Remove tools + preference memory", "dropItemIds": ["mcp-schemas", "customer-memory"], "quality": 0.906, "inputTokens": 10450, "outputTokens": 481, "latencyMs": 2940, "costUsd": 0.0314, "attempts": 7, "successes": 7, "qualityLossCi95": [-0.002, 0.009] },
+    { "id": "over-trimmed", "label": "Aggressive retrieval trim", "dropItemIds": ["mcp-schemas", "customer-memory", "pricing-page", "returns-page"], "quality": 0.824, "inputTokens": 6460, "outputTokens": 430, "latencyMs": 2310, "costUsd": 0.0198, "attempts": 7, "successes": 7, "qualityLossCi95": [0.075, 0.098] }
+  ],
+  "auditCostUsd": 0.91
+}
