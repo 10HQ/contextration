@@ -9,8 +9,6 @@ updates:
       time: "09:00"
       timezone: Etc/UTC
     open-pull-requests-limit: 5
-    labels:
-      - dependencies
     commit-message:
       prefix: deps
 
@@ -22,8 +20,5 @@ updates:
       time: "09:30"
       timezone: Etc/UTC
     open-pull-requests-limit: 5
-    labels:
-      - dependencies
-      - github-actions
     commit-message:
       prefix: ci
